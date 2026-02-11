@@ -1,0 +1,20 @@
+{
+  "short_name": "观心日记",
+  "name": "观心日记 - Mindful Mirror",
+  "icons": [
+    {
+      "src": "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f9d8-200d-2642-fe0f.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f9d8-200d-2642-fe0f.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#fdfbf7",
+  "background_color": "#fdfbf7"
+}
