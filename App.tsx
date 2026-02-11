@@ -49,7 +49,7 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-stone-50 text-stone-800 font-sans selection:bg-teal-100 selection:text-teal-900">
       <div className="max-w-md mx-auto min-h-screen bg-[#fdfbf7] shadow-2xl relative">
-        <main className="p-6 h-full min-h-screen box-border">
+        <main className="p-6 pt-safe-top h-full min-h-screen box-border">
           {renderView()}
         </main>
         <Nav currentView={currentView} onChangeView={setCurrentView} />

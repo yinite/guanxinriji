@@ -7,7 +7,8 @@
     
     <!-- PWA / iOS Web Clip Config -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- Changed to 'default' to ensure black text on light background in status bar -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="观心日记" />
     <meta name="theme-color" content="#fdfbf7" />
     <link rel="manifest" href="/manifest.json" />
@@ -42,6 +43,7 @@
             },
             padding: {
               'safe': 'env(safe-area-inset-bottom)',
+              'safe-top': 'env(safe-area-inset-top)',
             }
           }
         }
