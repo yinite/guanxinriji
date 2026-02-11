@@ -1,10 +1,8 @@
 import React, { useMemo } from 'react';
 import { DailyRecord, TargetPerson, TARGET_LABELS, EmotionLog } from '../types';
 import { getAllRecordsArray, getRawDataForExport, importDataFromJSON } from '../services/storage';
-import { Download, UploadCloud, Database, AlertCircle, TrendingDown, CheckCircle2 } from 'lucide-react';
+import { Download, UploadCloud, Database, AlertCircle, TrendingDown, CheckCircle2, CalendarDays, Smile, Frown } from 'lucide-react';
 import {
-  BarChart,
-  Bar,
   LineChart,
   Line,
   XAxis,
@@ -12,10 +10,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Cell,
-  PieChart,
-  Pie,
-  Legend
 } from 'recharts';
 
 export const StatsView: React.FC = () => {
@@ -34,17 +28,16 @@ export const StatsView: React.FC = () => {
       totalThoughtCount += (log.negativeThoughtCount || 0);
     });
 
-    // Format Date MM-DD
     const dateLabel = r.date.substring(5);
     return {
       date: dateLabel,
-      agitation: negativeCount, // Days marked as "Agitated" summary
-      thoughtCount: totalThoughtCount, // Specific thought instances
+      agitation: negativeCount,
+      thoughtCount: totalThoughtCount,
       peace: 3 - negativeCount,
     };
   });
 
-  // Prepare data for Pie Chart (Overall Distribution)
+  // Prepare data for Pie Chart
   const totalStats = {
     [TargetPerson.Wife]: { peaceful: 0, agitated: 0, thoughts: 0 },
     [TargetPerson.Son]: { peaceful: 0, agitated: 0, thoughts: 0 },
@@ -71,9 +64,7 @@ export const StatsView: React.FC = () => {
     total: val.agitated + val.peaceful
   }));
 
-  // Calculate Overall Peace Rate
-  let totalDaysRecorded = records.length;
-  let totalInteractions = totalDaysRecorded * 3;
+  let totalInteractions = records.length * 3;
   let totalPeacefulInteractions = 0;
   let totalThoughts = 0;
   
@@ -86,59 +77,53 @@ export const StatsView: React.FC = () => {
     ? Math.round((totalPeacefulInteractions / totalInteractions) * 100) 
     : 100;
 
-  // Handlers for Data Management
+  // Handlers
   const handleExport = () => {
     const data = getRawDataForExport();
-    if (!data) {
-        alert("暂无数据可导出");
-        return;
-    }
+    if (!data) { alert("暂无数据"); return; }
     const blob = new Blob([data], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `mindful_mirror_backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `mindful_backup_${new Date().toISOString().split('T')[0]}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   };
 
-  const handleImportTrigger = () => {
-    document.getElementById('import-file')?.click();
-  };
+  const handleImportTrigger = () => document.getElementById('import-file')?.click();
 
   const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    const confirmMsg = "导入备份将覆盖当前的所有记录，确定要继续吗？";
-    if (!window.confirm(confirmMsg)) {
-        e.target.value = ''; // Reset
-        return;
-    }
-
+    if (!window.confirm("覆盖当前记录？")) return;
     const reader = new FileReader();
     reader.onload = (event) => {
-        const content = event.target?.result as string;
-        if (importDataFromJSON(content)) {
-            alert("数据恢复成功！页面将刷新。");
+        if (importDataFromJSON(event.target?.result as string)) {
+            alert("恢复成功");
             window.location.reload();
         } else {
-            alert("文件格式错误，请确保选择的是正确的备份文件。");
+            alert("文件错误");
         }
     };
     reader.readAsText(file);
-    e.target.value = ''; // Reset input
   };
+
+  // Helper for Status Icon in Table
+  const StatusIcon = ({ isAgitated }: { isAgitated: boolean }) => (
+    isAgitated 
+      ? <div className="flex justify-center"><div className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center text-red-500"><Frown size={14}/></div></div>
+      : <div className="flex justify-center"><div className="w-6 h-6 rounded-full bg-teal-100 flex items-center justify-center text-teal-600"><Smile size={14}/></div></div>
+  );
+
+  // Reverse records for list view
+  const recentRecords = [...records].reverse().slice(0, 30);
 
   return (
     <div className="space-y-8 pb-24 animate-fade-in">
        <header>
         <h2 className="text-2xl font-serif font-bold text-stone-800 mb-2">修行统计</h2>
-        <p className="text-stone-500 text-sm">
-          回首过往，观照无常。
-        </p>
+        <p className="text-stone-500 text-sm">回首过往，观照无常。</p>
       </header>
 
       {/* Summary Card */}
@@ -153,90 +138,73 @@ export const StatsView: React.FC = () => {
          </div>
       </div>
 
-      {/* Thought Frequency Chart (New) */}
+      {/* Status History Table */}
+      <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-stone-100">
+        <div className="p-4 border-b border-stone-100 flex items-center gap-2">
+            <CalendarDays size={18} className="text-stone-400"/>
+            <h3 className="text-stone-700 font-medium">每日状态明细</h3>
+        </div>
+        <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+                <thead className="bg-stone-50 text-stone-500 font-medium text-xs uppercase">
+                    <tr>
+                        <th className="px-4 py-3">日期</th>
+                        <th className="px-2 py-3 text-center">妻子</th>
+                        <th className="px-2 py-3 text-center">儿子</th>
+                        <th className="px-2 py-3 text-center">父母</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-100">
+                    {recentRecords.map(r => (
+                        <tr key={r.date} className="hover:bg-stone-50/50 transition-colors">
+                            <td className="px-4 py-3 font-mono text-stone-600 whitespace-nowrap">{r.date.substring(5)}</td>
+                            <td className="px-2 py-3"><StatusIcon isAgitated={r.targets[TargetPerson.Wife].hasNegativeEmotion} /></td>
+                            <td className="px-2 py-3"><StatusIcon isAgitated={r.targets[TargetPerson.Son].hasNegativeEmotion} /></td>
+                            <td className="px-2 py-3"><StatusIcon isAgitated={r.targets[TargetPerson.Parents].hasNegativeEmotion} /></td>
+                        </tr>
+                    ))}
+                    {recentRecords.length === 0 && (
+                        <tr><td colSpan={4} className="p-4 text-center text-stone-400">暂无数据</td></tr>
+                    )}
+                </tbody>
+            </table>
+        </div>
+      </div>
+
+      {/* Trend Chart */}
       <div className="bg-white rounded-2xl p-4 shadow-sm border border-stone-100">
         <h3 className="text-stone-700 font-medium mb-4 ml-2 flex items-center gap-2">
             <TrendingDown size={18} className="text-stone-400"/>
             妄念趋势 (每日次数)
         </h3>
-        <div className="h-56 w-full text-xs">
+        <div className="h-48 w-full text-xs">
             <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={trendData} margin={{ top: 10, right: 20, left: -20, bottom: 0 }}>
+                <LineChart data={trendData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e7e5e4" />
                     <XAxis dataKey="date" stroke="#a8a29e" tick={{fill: '#78716c'}} />
                     <YAxis allowDecimals={false} />
-                    <Tooltip 
-                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                        cursor={{stroke: '#d6d3d1'}}
-                    />
-                    <Line type="monotone" dataKey="thoughtCount" name="觉察次数" stroke="#78716c" strokeWidth={3} dot={{r: 4, fill: '#78716c'}} activeDot={{r: 6}} />
+                    <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} cursor={{stroke: '#d6d3d1'}} />
+                    <Line type="monotone" dataKey="thoughtCount" stroke="#78716c" strokeWidth={3} dot={{r: 3, fill: '#78716c'}} />
                 </LineChart>
             </ResponsiveContainer>
         </div>
-        <p className="text-center text-xs text-stone-400 mt-2">愿此曲线日渐趋零，复归清净。</p>
       </div>
 
-       {/* Breakdown */}
-       <div className="grid gap-4">
-          <h3 className="text-stone-700 font-medium ml-2">觉察统计</h3>
-          {pieData.map((d) => (
-            <div key={d.name} className="bg-white p-4 rounded-xl border border-stone-100 flex items-center justify-between">
-                <span className="font-bold text-stone-600">{d.name}</span>
-                <div className="flex items-center gap-6">
-                    <div className="flex flex-col items-end">
-                        <span className="text-xs text-stone-400">觉察念头</span>
-                        <span className="text-sm font-bold text-stone-700">{d.thoughts} 次</span>
-                    </div>
-                     <div className="w-px h-8 bg-stone-200"></div>
-                    <div className="flex flex-col items-end">
-                        <span className="text-xs text-stone-400">烦恼天数</span>
-                        <span className="text-sm font-medium text-stone-500">{d.agitated} / {d.total}</span>
-                    </div>
-                </div>
-            </div>
-          ))}
-       </div>
-
-       {/* Data Management Section */}
-       <div className="border-2 border-dashed border-stone-200 rounded-2xl p-6 mt-8 bg-stone-50/50">
+       {/* Data Management */}
+       <div className="border border-dashed border-stone-200 rounded-2xl p-5 bg-stone-50/50">
         <div className="flex items-center justify-between mb-2">
-            <h3 className="text-stone-700 font-bold flex items-center gap-2">
-                <Database size={18} />
-                数据管理
+            <h3 className="text-stone-700 font-bold flex items-center gap-2 text-sm">
+                <Database size={16} /> 数据备份
             </h3>
-            <span className="text-[10px] text-teal-600 bg-teal-50 px-2 py-1 rounded-full flex items-center gap-1 border border-teal-100">
-                <CheckCircle2 size={10} />
-                自动保存中
-            </span>
         </div>
-        
-        <p className="text-xs text-stone-400 mb-4 leading-relaxed flex items-start gap-1">
-            <AlertCircle size={12} className="mt-0.5 shrink-0" />
-            数据存储在您的手机浏览器中。建议定期“导出备份”，以防清理缓存导致记录丢失。
-        </p>
-        
-        <div className="flex gap-3">
-            <button 
-                onClick={handleExport}
-                className="flex-1 py-3 px-4 rounded-xl border border-teal-600 text-teal-700 font-medium text-sm flex items-center justify-center gap-2 hover:bg-teal-50 transition-colors bg-white shadow-sm"
-            >
-                <Download size={16} />
-                导出备份
+        <div className="flex gap-2">
+            <button onClick={handleExport} className="flex-1 py-2 px-3 rounded-lg border border-teal-600 text-teal-700 text-xs font-medium flex items-center justify-center gap-1 bg-white">
+                <Download size={14} /> 导出
             </button>
-            <button 
-                onClick={handleImportTrigger}
-                className="flex-1 py-3 px-4 rounded-xl border border-stone-300 text-stone-600 font-medium text-sm flex items-center justify-center gap-2 hover:bg-stone-100 transition-colors bg-white shadow-sm"
-            >
-                <UploadCloud size={16} />
-                导入恢复
+            <button onClick={handleImportTrigger} className="flex-1 py-2 px-3 rounded-lg border border-stone-300 text-stone-600 text-xs font-medium flex items-center justify-center gap-1 bg-white">
+                <UploadCloud size={14} /> 恢复
             </button>
-            <input 
-                type="file" 
-                id="import-file" 
-                accept=".json" 
-                className="hidden" 
-                onChange={handleImportFile}
-            />
+            <input type="file" id="import-file" accept=".json" className="hidden" onChange={handleImportFile} />
         </div>
        </div>
     </div>
