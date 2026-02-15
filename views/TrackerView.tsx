@@ -22,32 +22,19 @@ export const TrackerView: React.FC<TrackerViewProps> = ({ record, onUpdateRecord
     onUpdateRecord(newRecord);
   };
 
-  const handleIncrementThought = (target: TargetPerson) => {
-    const currentCount = record.targets[target].negativeThoughtCount || 0;
-    const newRecord = {
-      ...record,
-      targets: {
-        ...record.targets,
-        [target]: {
-          ...record.targets[target],
-          negativeThoughtCount: currentCount + 1,
-        },
-      },
-    };
-    onUpdateRecord(newRecord);
-  };
-
-  const handleDecrementThought = (target: TargetPerson) => {
-    const currentCount = record.targets[target].negativeThoughtCount || 0;
-    if (currentCount <= 0) return;
+  const handleUpdateCounts = (target: TargetPerson, deltaPositive: number, deltaNegative: number) => {
+    const currentTarget = record.targets[target];
+    const newPos = Math.max(0, (currentTarget.positiveThoughtCount || 0) + deltaPositive);
+    const newNeg = Math.max(0, (currentTarget.negativeThoughtCount || 0) + deltaNegative);
 
     const newRecord = {
       ...record,
       targets: {
         ...record.targets,
         [target]: {
-          ...record.targets[target],
-          negativeThoughtCount: currentCount - 1,
+          ...currentTarget,
+          positiveThoughtCount: newPos,
+          negativeThoughtCount: newNeg,
         },
       },
     };
@@ -68,7 +55,7 @@ export const TrackerView: React.FC<TrackerViewProps> = ({ record, onUpdateRecord
         <p className="text-stone-500 text-sm">{todayStr}</p>
         <div className="mt-4 p-4 bg-stone-100 rounded-lg border-l-4 border-teal-600">
             <p className="text-stone-700 text-sm italic font-serif leading-relaxed">
-            "五蕴皆空，度一切苦厄。不要把不好的心情纠结带入到家人关系中。"
+            "善恶之念，皆由心生。记录是为了觉察，觉察即是修行的开始。"
             </p>
         </div>
       </header>
@@ -78,30 +65,20 @@ export const TrackerView: React.FC<TrackerViewProps> = ({ record, onUpdateRecord
           target={TargetPerson.Wife}
           log={record.targets[TargetPerson.Wife]}
           onUpdate={(val) => handleUpdate(TargetPerson.Wife, val)}
-          onIncrementThought={() => handleIncrementThought(TargetPerson.Wife)}
-          onDecrementThought={() => handleDecrementThought(TargetPerson.Wife)}
+          onUpdateCounts={(dp, dn) => handleUpdateCounts(TargetPerson.Wife, dp, dn)}
         />
         <TrackerCard
           target={TargetPerson.Son}
           log={record.targets[TargetPerson.Son]}
           onUpdate={(val) => handleUpdate(TargetPerson.Son, val)}
-          onIncrementThought={() => handleIncrementThought(TargetPerson.Son)}
-          onDecrementThought={() => handleDecrementThought(TargetPerson.Son)}
+          onUpdateCounts={(dp, dn) => handleUpdateCounts(TargetPerson.Son, dp, dn)}
         />
         <TrackerCard
           target={TargetPerson.Parents}
           log={record.targets[TargetPerson.Parents]}
           onUpdate={(val) => handleUpdate(TargetPerson.Parents, val)}
-          onIncrementThought={() => handleIncrementThought(TargetPerson.Parents)}
-          onDecrementThought={() => handleDecrementThought(TargetPerson.Parents)}
+          onUpdateCounts={(dp, dn) => handleUpdateCounts(TargetPerson.Parents, dp, dn)}
         />
-      </div>
-      
-      <div className="text-center mt-6 px-6">
-        <p className="text-xs text-stone-400 leading-relaxed">
-           上方开关记录<span className="font-bold text-stone-500">最终结果</span>（今日是否清净）。<br/>
-           卡片内记录<span className="font-bold text-stone-500">起心动念</span>（过程中的妄念次数）。
-        </p>
       </div>
     </div>
   );

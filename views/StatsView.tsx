@@ -1,81 +1,55 @@
 import React, { useMemo } from 'react';
 import { DailyRecord, TargetPerson, TARGET_LABELS, EmotionLog } from '../types';
 import { getAllRecordsArray, getRawDataForExport, importDataFromJSON } from '../services/storage';
-import { Download, UploadCloud, Database, AlertCircle, TrendingDown, CheckCircle2, CalendarDays, Smile, Frown } from 'lucide-react';
+import { Download, UploadCloud, Database, AlertCircle, TrendingDown, CheckCircle2, CalendarDays, Smile, Frown, Scale, Heart, CloudLightning } from 'lucide-react';
 import {
-  LineChart,
-  Line,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  Legend
 } from 'recharts';
 
 export const StatsView: React.FC = () => {
   const records = useMemo(() => getAllRecordsArray(), []);
 
-  // Prepare data for the Bar Chart (Last 7 Days)
-  const last7Days = records.slice(-7);
+  // Prepare data for the Bar Chart (Last 10 Days)
+  const last10Days = records.slice(-10);
   
-  const trendData = last7Days.map(r => {
-    let negativeCount = 0;
-    let totalThoughtCount = 0;
+  const trendData = last10Days.map(r => {
+    let dayPos = 0;
+    let dayNeg = 0;
 
     Object.values(r.targets).forEach((t) => {
       const log = t as EmotionLog;
-      if (log.hasNegativeEmotion) negativeCount++;
-      totalThoughtCount += (log.negativeThoughtCount || 0);
+      dayPos += (log.positiveThoughtCount || 0);
+      dayNeg += (log.negativeThoughtCount || 0);
     });
 
     const dateLabel = r.date.substring(5);
     return {
       date: dateLabel,
-      agitation: negativeCount,
-      thoughtCount: totalThoughtCount,
-      peace: 3 - negativeCount,
+      善念: dayPos,
+      妄念: dayNeg,
     };
   });
 
-  // Prepare data for Pie Chart
-  const totalStats = {
-    [TargetPerson.Wife]: { peaceful: 0, agitated: 0, thoughts: 0 },
-    [TargetPerson.Son]: { peaceful: 0, agitated: 0, thoughts: 0 },
-    [TargetPerson.Parents]: { peaceful: 0, agitated: 0, thoughts: 0 },
-  };
-
+  // Calculate totals
+  let totalPos = 0;
+  let totalNeg = 0;
   records.forEach(r => {
-    (Object.keys(r.targets) as TargetPerson[]).forEach(target => {
-      const log = r.targets[target];
-      if (log.hasNegativeEmotion) {
-        totalStats[target].agitated++;
-      } else {
-        totalStats[target].peaceful++;
-      }
-      totalStats[target].thoughts += (log.negativeThoughtCount || 0);
+    Object.values(r.targets).forEach(t => {
+       const log = t as EmotionLog;
+       totalPos += (log.positiveThoughtCount || 0);
+       totalNeg += (log.negativeThoughtCount || 0);
     });
   });
-
-  const pieData = Object.entries(totalStats).map(([key, val]) => ({
-    name: TARGET_LABELS[key as TargetPerson],
-    agitated: val.agitated,
-    peaceful: val.peaceful,
-    thoughts: val.thoughts,
-    total: val.agitated + val.peaceful
-  }));
-
-  let totalInteractions = records.length * 3;
-  let totalPeacefulInteractions = 0;
-  let totalThoughts = 0;
   
-  pieData.forEach(p => {
-    totalPeacefulInteractions += p.peaceful;
-    totalThoughts += p.thoughts;
-  });
-  
-  const peaceRate = totalInteractions > 0 
-    ? Math.round((totalPeacefulInteractions / totalInteractions) * 100) 
-    : 100;
+  const totalThoughts = totalPos + totalNeg;
+  const goodRatio = totalThoughts > 0 ? Math.round((totalPos / totalThoughts) * 100) : 0;
 
   // Handlers
   const handleExport = () => {
@@ -112,9 +86,23 @@ export const StatsView: React.FC = () => {
   // Helper for Status Icon in Table
   const StatusIcon = ({ isAgitated }: { isAgitated: boolean }) => (
     isAgitated 
-      ? <div className="flex justify-center"><div className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center text-red-500"><Frown size={14}/></div></div>
-      : <div className="flex justify-center"><div className="w-6 h-6 rounded-full bg-teal-100 flex items-center justify-center text-teal-600"><Smile size={14}/></div></div>
+      ? <div className="flex justify-center"><div className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center text-red-500"><Frown size={12}/></div></div>
+      : <div className="flex justify-center"><div className="w-5 h-5 rounded-full bg-teal-100 flex items-center justify-center text-teal-600"><Smile size={12}/></div></div>
   );
+
+  // Helper to show mini ratio
+  const RatioText = ({ pos, neg }: { pos?: number, neg?: number }) => {
+      const p = pos || 0;
+      const n = neg || 0;
+      if (p === 0 && n === 0) return <span className="text-stone-300">-</span>;
+      return (
+          <div className="flex items-center gap-1 text-[10px] justify-center">
+              <span className="text-teal-600 font-bold">{p}</span>
+              <span className="text-stone-300">/</span>
+              <span className="text-stone-400">{n}</span>
+          </div>
+      )
+  };
 
   // Reverse records for list view
   const recentRecords = [...records].reverse().slice(0, 30);
@@ -123,70 +111,98 @@ export const StatsView: React.FC = () => {
     <div className="space-y-8 pb-24 animate-fade-in">
        <header>
         <h2 className="text-2xl font-serif font-bold text-stone-800 mb-2">修行统计</h2>
-        <p className="text-stone-500 text-sm">回首过往，观照无常。</p>
+        <p className="text-stone-500 text-sm">断恶修善，积功累德。</p>
       </header>
 
       {/* Summary Card */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-100 flex items-center justify-between">
-         <div>
-            <p className="text-stone-400 text-xs font-medium uppercase tracking-wider">总觉察念头</p>
-            <p className="text-4xl font-serif font-bold text-stone-700 mt-1">{totalThoughts}<span className="text-sm font-normal text-stone-400 ml-1">次</span></p>
-         </div>
-         <div className="text-right">
-            <p className="text-stone-400 text-xs font-medium uppercase tracking-wider">综合清净度</p>
-            <p className="text-2xl font-serif text-teal-700 mt-1">{peaceRate}%</p>
-         </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-stone-100">
+             <div className="flex items-center gap-2 mb-2 text-teal-700">
+                <Heart size={16} />
+                <p className="text-xs font-bold uppercase tracking-wider">累计善念</p>
+             </div>
+             <p className="text-3xl font-serif font-bold text-stone-700">{totalPos}</p>
+        </div>
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-stone-100">
+             <div className="flex items-center gap-2 mb-2 text-stone-500">
+                <CloudLightning size={16} />
+                <p className="text-xs font-bold uppercase tracking-wider">累计妄念</p>
+             </div>
+             <p className="text-3xl font-serif font-bold text-stone-700">{totalNeg}</p>
+        </div>
       </div>
-
-      {/* Status History Table */}
-      <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-stone-100">
-        <div className="p-4 border-b border-stone-100 flex items-center gap-2">
-            <CalendarDays size={18} className="text-stone-400"/>
-            <h3 className="text-stone-700 font-medium">每日状态明细</h3>
-        </div>
-        <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-                <thead className="bg-stone-50 text-stone-500 font-medium text-xs uppercase">
-                    <tr>
-                        <th className="px-4 py-3">日期</th>
-                        <th className="px-2 py-3 text-center">妻子</th>
-                        <th className="px-2 py-3 text-center">儿子</th>
-                        <th className="px-2 py-3 text-center">父母</th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-stone-100">
-                    {recentRecords.map(r => (
-                        <tr key={r.date} className="hover:bg-stone-50/50 transition-colors">
-                            <td className="px-4 py-3 font-mono text-stone-600 whitespace-nowrap">{r.date.substring(5)}</td>
-                            <td className="px-2 py-3"><StatusIcon isAgitated={r.targets[TargetPerson.Wife].hasNegativeEmotion} /></td>
-                            <td className="px-2 py-3"><StatusIcon isAgitated={r.targets[TargetPerson.Son].hasNegativeEmotion} /></td>
-                            <td className="px-2 py-3"><StatusIcon isAgitated={r.targets[TargetPerson.Parents].hasNegativeEmotion} /></td>
-                        </tr>
-                    ))}
-                    {recentRecords.length === 0 && (
-                        <tr><td colSpan={4} className="p-4 text-center text-stone-400">暂无数据</td></tr>
-                    )}
-                </tbody>
-            </table>
-        </div>
+      
+      {/* Ratio Bar */}
+      <div className="bg-white rounded-2xl p-4 shadow-sm border border-stone-100">
+           <div className="flex justify-between items-end mb-2">
+               <span className="text-xs font-bold text-stone-500">善念占比</span>
+               <span className="text-xl font-serif font-bold text-teal-700">{goodRatio}%</span>
+           </div>
+           <div className="w-full h-3 bg-stone-100 rounded-full overflow-hidden flex">
+               <div className="h-full bg-teal-500 transition-all duration-1000" style={{ width: `${goodRatio}%` }}></div>
+           </div>
+           <p className="text-[10px] text-stone-400 mt-2 text-center">
+               {goodRatio > 50 ? "随喜！正念强于妄念，继续保持。" : "加油！觉察妄念，转念即是菩提。"}
+           </p>
       </div>
 
       {/* Trend Chart */}
       <div className="bg-white rounded-2xl p-4 shadow-sm border border-stone-100">
         <h3 className="text-stone-700 font-medium mb-4 ml-2 flex items-center gap-2">
-            <TrendingDown size={18} className="text-stone-400"/>
-            妄念趋势 (每日次数)
+            <Scale size={18} className="text-stone-400"/>
+            每日善恶对比
         </h3>
-        <div className="h-48 w-full text-xs">
+        <div className="h-56 w-full text-xs">
             <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={trendData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                <BarChart data={trendData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e7e5e4" />
                     <XAxis dataKey="date" stroke="#a8a29e" tick={{fill: '#78716c'}} />
                     <YAxis allowDecimals={false} />
-                    <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} cursor={{stroke: '#d6d3d1'}} />
-                    <Line type="monotone" dataKey="thoughtCount" stroke="#78716c" strokeWidth={3} dot={{r: 3, fill: '#78716c'}} />
-                </LineChart>
+                    <Tooltip 
+                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} 
+                        cursor={{fill: '#f5f5f4'}} 
+                    />
+                    <Legend iconType="circle" />
+                    <Bar dataKey="善念" stackId="a" fill="#2dd4bf" barSize={12} radius={[0, 0, 4, 4]} />
+                    <Bar dataKey="妄念" stackId="a" fill="#a8a29e" barSize={12} radius={[4, 4, 0, 0]} />
+                </BarChart>
             </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Detailed Table */}
+      <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-stone-100">
+        <div className="p-4 border-b border-stone-100 flex items-center gap-2">
+            <CalendarDays size={18} className="text-stone-400"/>
+            <h3 className="text-stone-700 font-medium">每日状态明细 (善/妄)</h3>
+        </div>
+        <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+                <thead className="bg-stone-50 text-stone-500 font-medium text-xs uppercase">
+                    <tr>
+                        <th className="px-3 py-3 w-20">日期</th>
+                        <th className="px-1 py-3 text-center">妻子</th>
+                        <th className="px-1 py-3 text-center">儿子</th>
+                        <th className="px-1 py-3 text-center">父母</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-100">
+                    {recentRecords.map(r => (
+                        <tr key={r.date} className="hover:bg-stone-50/50 transition-colors">
+                            <td className="px-3 py-3 font-mono text-stone-600 whitespace-nowrap text-xs">{r.date.substring(5)}</td>
+                            <td className="px-1 py-3 text-center">
+                                <RatioText pos={r.targets[TargetPerson.Wife].positiveThoughtCount} neg={r.targets[TargetPerson.Wife].negativeThoughtCount} />
+                            </td>
+                            <td className="px-1 py-3 text-center">
+                                <RatioText pos={r.targets[TargetPerson.Son].positiveThoughtCount} neg={r.targets[TargetPerson.Son].negativeThoughtCount} />
+                            </td>
+                            <td className="px-1 py-3 text-center">
+                                <RatioText pos={r.targets[TargetPerson.Parents].positiveThoughtCount} neg={r.targets[TargetPerson.Parents].negativeThoughtCount} />
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
         </div>
       </div>
 

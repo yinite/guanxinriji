@@ -13,9 +13,9 @@ export const getTodayDateString = (): string => {
 export const getInitialRecord = (date: string): DailyRecord => ({
   date,
   targets: {
-    [TargetPerson.Wife]: { hasNegativeEmotion: false, negativeThoughtCount: 0 },
-    [TargetPerson.Son]: { hasNegativeEmotion: false, negativeThoughtCount: 0 },
-    [TargetPerson.Parents]: { hasNegativeEmotion: false, negativeThoughtCount: 0 },
+    [TargetPerson.Wife]: { hasNegativeEmotion: false, negativeThoughtCount: 0, positiveThoughtCount: 0 },
+    [TargetPerson.Son]: { hasNegativeEmotion: false, negativeThoughtCount: 0, positiveThoughtCount: 0 },
+    [TargetPerson.Parents]: { hasNegativeEmotion: false, negativeThoughtCount: 0, positiveThoughtCount: 0 },
   },
   reflection: '',
 });

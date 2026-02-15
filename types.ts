@@ -5,8 +5,9 @@ export enum TargetPerson {
 }
 
 export interface EmotionLog {
-  hasNegativeEmotion: boolean; // true if bad emotion, false if peaceful
-  negativeThoughtCount: number; // Count of momentary negative thoughts
+  hasNegativeEmotion: boolean; // true if bad emotion, false if peaceful (Final Verdict)
+  negativeThoughtCount: number; // 妄念 (Delusions/Negative thoughts)
+  positiveThoughtCount: number; // 善念 (Wholesome/Positive thoughts)
   note?: string;
 }
 

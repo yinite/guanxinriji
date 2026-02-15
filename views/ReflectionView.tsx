@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { DailyRecord, TargetPerson, TARGET_LABELS, EmotionLog } from '../types';
 import { generateDharmaAdvice } from '../services/geminiService';
 import { getAllRecordsArray } from '../services/storage';
-import { Sparkles, Save, Loader2, Check, History, Calendar, Heart, Frown, Smile } from 'lucide-react';
+import { Sparkles, Save, Loader2, Check, History, Calendar, Heart, CloudLightning } from 'lucide-react';
 
 interface ReflectionViewProps {
   record: DailyRecord;
@@ -21,9 +21,8 @@ export const ReflectionView: React.FC<ReflectionViewProps> = ({ record, onUpdate
     return all
       .filter(r => r.date !== record.date)
       .sort((a, b) => b.date.localeCompare(a.date));
-  }, [record.date]); // Re-calculate if today's date changes (rare) or component remounts
+  }, [record.date]);
 
-  // Sync local state if record changes externally
   useEffect(() => {
     setLocalReflection(record.reflection);
   }, [record.reflection]);
@@ -48,12 +47,15 @@ export const ReflectionView: React.FC<ReflectionViewProps> = ({ record, onUpdate
     onUpdateRecord({ ...record, reflection: localReflection });
     setIsGenerating(true);
     
-    const emotions = Object.entries(record.targets).map(([key, val]) => {
+    // Create a detailed summary for the AI
+    const stateSummary = Object.entries(record.targets).map(([key, val]) => {
       const log = val as EmotionLog;
-      return `${TARGET_LABELS[key as TargetPerson]}: ${log.hasNegativeEmotion ? '有情绪' : '平静'}`;
-    }).join(', ');
+      const pos = log.positiveThoughtCount || 0;
+      const neg = log.negativeThoughtCount || 0;
+      return `${TARGET_LABELS[key as TargetPerson]}: 善念${pos}次, 妄念${neg}次, 最终状态${log.hasNegativeEmotion ? '烦恼' : '清净'}`;
+    }).join('; ');
 
-    const advice = await generateDharmaAdvice(localReflection, emotions);
+    const advice = await generateDharmaAdvice(localReflection, stateSummary);
     
     onUpdateRecord({
       ...record,
@@ -63,24 +65,23 @@ export const ReflectionView: React.FC<ReflectionViewProps> = ({ record, onUpdate
     setIsGenerating(false);
   };
 
-  // Helper to render emotion tags for history items
-  const renderEmotionTags = (targets: DailyRecord['targets']) => {
+  // Helper to render emotion stats for history items
+  const renderEmotionStats = (targets: DailyRecord['targets']) => {
+    let dayPos = 0;
+    let dayNeg = 0;
+    (Object.values(targets) as EmotionLog[]).forEach(l => {
+        dayPos += (l.positiveThoughtCount || 0);
+        dayNeg += (l.negativeThoughtCount || 0);
+    });
+
     return (
-        <div className="flex flex-wrap gap-2 mt-2 mb-3">
-            {(Object.keys(targets) as TargetPerson[]).map(target => {
-                const isBad = targets[target].hasNegativeEmotion;
-                return (
-                    <span key={target} className={`
-                        text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1 border
-                        ${isBad 
-                            ? 'bg-red-50 text-red-600 border-red-100' 
-                            : 'bg-teal-50 text-teal-700 border-teal-100'}
-                    `}>
-                        {isBad ? <Frown size={10} /> : <Smile size={10} />}
-                        {TARGET_LABELS[target]}
-                    </span>
-                );
-            })}
+        <div className="flex gap-4 mt-2 mb-3 text-xs">
+            <span className="flex items-center gap-1 text-teal-700 bg-teal-50 px-2 py-1 rounded">
+                <Heart size={10} className="fill-current" /> 善念: {dayPos}
+            </span>
+            <span className="flex items-center gap-1 text-stone-600 bg-stone-100 px-2 py-1 rounded">
+                <CloudLightning size={10} /> 妄念: {dayNeg}
+            </span>
         </div>
     );
   };
@@ -165,8 +166,8 @@ export const ReflectionView: React.FC<ReflectionViewProps> = ({ record, onUpdate
                             <span className="font-bold text-stone-700 font-mono text-sm">{hist.date}</span>
                         </div>
 
-                        {/* Status Tags */}
-                        {renderEmotionTags(hist.targets)}
+                        {/* Stats Tags */}
+                        {renderEmotionStats(hist.targets)}
 
                         {/* Reflection Content */}
                         <div className="prose prose-stone prose-sm max-w-none">
